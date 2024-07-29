@@ -1,0 +1,42 @@
+name: Build and Deploy with Skaffold
+
+on:
+  push:
+    paths:
+      - '**'
+      - '!**.gitignore'
+      - '!README.md'
+
+jobs:
+  build-and-deploy:
+    runs-on: bookish-train
+    permissions:
+      packages: write
+      id-token: write
+    steps:
+
+    - name: Install git
+      run: sudo apt install git -y
+
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GH_TOKEN }}
+
+    - name: Install Skaffold
+      run: |
+        sudo apt install -y curl && \
+        pushd /tmp && curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/latest/skaffold-linux-arm64 && \
+        sudo install skaffold /usr/local/bin/ && popd
+  
+    - name: Build, scan and deploy image
+      run: |
+        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin v0.53.0 && \
+        curl -LO https://dl.k8s.io/release/v1.25.13/bin/linux/arm64/kubectl && chmod +x ./kubectl && sudo mv ./kubectl /usr/local/bin/kubectl
+        echo "${{ secrets.KUBE_CONFIG }}" > /tmp/kubeconfig && export KUBECONFIG=/tmp/kubeconfig && \
+        skaffold run

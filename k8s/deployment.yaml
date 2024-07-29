@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookish-train-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bookish-train
+  template:
+    metadata:
+      labels:
+        app: bookish-train
+    spec:
+      containers:
+      - name: bookish-train-container
+        image: ghcr.io/billmetangmo/bookish-train
+        args: ["-u", "https://news.ycombinator.com","-s"]
+        securityContext:
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1001
